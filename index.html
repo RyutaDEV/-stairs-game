@@ -129,7 +129,7 @@ const letters = ["1","2","3","4"];
 
 let currentLetter = "";
 let score = 0;
-let speed = 1500;
+let speed = 2000; // 🔥 começa mais tranquilo
 let timeout;
 
 const menu = document.getElementById("menu");
@@ -169,6 +169,60 @@ function spawnLetter() {
     timeout = setTimeout(() => {
         gameOver();
     }, speed);
+}
+
+function gameOver() {
+    failSound.play();
+    document.body.classList.add("shake");
+
+    bgMusic.pause();
+    bgMusic.currentTime = 0;
+
+    gameOverText.style.display = "block";
+
+    setTimeout(resetGame, 2000);
+}
+
+function resetGame() {
+    score = 0;
+    speed = 2000; // 🔥 reset mais justo
+
+    scoreDiv.textContent = "Pontos: 0";
+    gameOverText.style.display = "none";
+
+    bgMusic.play().catch(()=>{});
+
+    spawnLetter();
+}
+
+document.addEventListener("keydown", (e) => {
+    if (!currentLetter) return;
+
+    // 🔥 ignora teclas inválidas
+    if (!letters.includes(e.key)) return;
+
+    if (e.key === currentLetter) {
+        clearTimeout(timeout);
+
+        score++;
+        scoreDiv.textContent = "Pontos: " + score;
+
+        hitSound.currentTime = 0;
+        hitSound.play();
+
+        // 🔥 agora sobe a dificuldade de 15 em 15
+        if (score % 15 === 0) {
+            speed = Math.max(800, speed - 150);
+        }
+
+        // 🔥 pequeno delay (fica mais justo)
+        setTimeout(spawnLetter, 150);
+
+    } else {
+        gameOver();
+    }
+});
+</script>    }, speed);
 }
 
 function gameOver() {
