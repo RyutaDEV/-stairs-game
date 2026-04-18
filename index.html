@@ -222,55 +222,6 @@ document.addEventListener("keydown", (e) => {
         gameOver();
     }
 });
-</script>    }, speed);
-}
-
-function gameOver() {
-    failSound.play();
-    document.body.classList.add("shake");
-
-    bgMusic.pause();
-    bgMusic.currentTime = 0;
-
-    gameOverText.style.display = "block";
-
-    setTimeout(resetGame, 2000);
-}
-
-function resetGame() {
-    score = 0;
-    speed = 1500;
-
-    scoreDiv.textContent = "Pontos: 0";
-    gameOverText.style.display = "none";
-
-    bgMusic.play().catch(()=>{});
-
-    spawnLetter();
-}
-
-document.addEventListener("keydown", (e) => {
-    if (!currentLetter) return;
-
-    if (e.key.toUpperCase() === currentLetter) {
-        clearTimeout(timeout);
-
-        score++;
-        scoreDiv.textContent = "Pontos: " + score;
-
-        hitSound.currentTime = 0;
-        hitSound.play();
-
-        if (score % 5 === 0) {
-            speed = Math.max(400, speed - 200);
-        }
-
-        spawnLetter();
-    } else {
-        gameOver();
-    }
-});
 </script>
-
 </body>
 </html>
