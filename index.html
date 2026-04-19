@@ -6,35 +6,454 @@
 
 <style>
 body {
-  margin: 0;
-  overflow: hidden;
-  background: black;
-  font-family: Arial;
-  color: #00ffcc;
+  margin:0;
+  overflow:hidden;
+  background:black;
+  font-family:Arial;
+  color:#00ffcc;
+}
+
+/* GAME */
+#game { width:100%; height:100%; }
+
+/* BOSS */
+body.boss {
+  box-shadow: inset 0 0 150px red;
 }
 
 /* UI */
-#ui {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 100;
-}
+#ui { position:absolute; top:10px; left:10px; z-index:100; }
 
-/* Linha (AGORA CORRETA) */
+/* LINHA */
 #line {
-  position: absolute;
-  bottom: 260px;
-  width: 100%;
-  height: 4px;
-  background: #00ffcc;
-  box-shadow: 0 0 15px #00ffcc;
-  z-index: 5;
+  position:absolute;
+  bottom:260px;
+  width:100%;
+  height:4px;
+  background:#00ffcc;
+  box-shadow:0 0 15px #00ffcc;
+}
+#line.boss {
+  background:red;
+  box-shadow:0 0 20px red;
 }
 
-/* Subaru (AJUSTADO) */
+/* SUBARU */
 #gif {
-  position: absolute;
+  position:absolute;
+  bottom:0;
+  left:50%;
+  transform:translateX(-50%);
+  width:400px;
+  display:none;
+  z-index:1;
+  border-radius:15px;
+  box-shadow:0 0 25px #00ffcc;
+}
+body.boss #gif {
+  box-shadow:0 0 30px red;
+}
+
+/* NOTAS */
+.note {
+  position:absolute;
+  width:60px;
+  height:60px;
+  background:#00ffcc;
+  border-radius:10px;
+  text-align:center;
+  line-height:60px;
+  font-weight:bold;
+  color:black;
+  box-shadow:0 0 15px #00ffcc;
+}
+.note.boss {
+  background:red;
+  box-shadow:0 0 20px red;
+}
+
+/* FEEDBACK */
+#feedback {
+  position:absolute;
+  bottom:300px;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:40px;
+  z-index:999;
+}
+
+/* MENUS */
+#menu, #shop {
+  position:absolute;
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  background:black;
+}
+#shop { display:none; }
+
+/* GAMEOVER */
+#gameover {
+  position:absolute;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.9);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+}
+
+/* BOTÕES */
+button {
+  padding:10px 30px;
+  font-size:20px;
+  background:#00ffcc;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  margin:5px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+<div id="menu">
+  <h1>Subaru Rhythm</h1>
+  <button onclick="startGame()">PLAY</button>
+  <button onclick="openShop()">LOJA</button>
+</div>
+
+<div id="shop">
+  <h1>🛒 LOJA</h1>
+  <p>Pontos: <span id="coins">0</span></p>
+  <p>Multiplicador: x<span id="mult">1</span></p>
+
+  <button onclick="buyMultiplier()">Multiplicador (500)</button>
+  <button onclick="buySpeed()">Velocidade (400)</button>
+  <button onclick="buySlowmo()">Slow Motion (600)</button>
+  <button onclick="buyAuto()">Auto Combo (800)</button>
+  <button onclick="resetStats()">RESETAR STATUS</button>
+
+  <h2>🎭 Skins</h2>
+  <button onclick="setSkin('auramonster.gif')">Skin 1</button>
+  <button onclick="setSkin('auramonsterskin2.gif')">Skin 2</button>
+
+  <button onclick="closeShop()">VOLTAR</button>
+</div>
+
+<div id="gameover">
+  <h1>💀 GAME OVER 💀</h1>
+  <button onclick="location.reload()">RESTART</button>
+</div>
+
+<div id="ui">
+  Pontos: <span id="score">0</span><br>
+  Combo: <span id="combo">0</span><br>
+  Erros: <span id="miss">0</span>/5
+</div>
+
+<div id="feedback"></div>
+<div id="line"></div>
+<img id="gif" src="auramonster.gif">
+
+<audio id="music" src="auramusic.mp3"></audio>
+<audio id="bossMusic" src="boss.mp3"></audio>
+<audio id="hitSound" src="clickaura.mp3"></audio>
+
+</div>
+
+<script>
+// SAVE
+function load(k,d){let v=localStorage.getItem(k);try{return v?JSON.parse(v):d}catch{return v||d}}
+function save(){
+localStorage.setItem("coins",coins);
+localStorage.setItem("mult",multiplier);
+localStorage.setItem("speed",speed);
+localStorage.setItem("slowmo",slowmo);
+localStorage.setItem("autocomb",autocomb);
+localStorage.setItem("skin",JSON.stringify(skin));
+}
+
+// STATS
+let score=0,combo=0,misses=0;
+let multiplier=load("mult",1);
+let coins=load("coins",0);
+let speed=load("speed",3.5);
+let slowmo=load("slowmo",0);
+let autocomb=load("autocomb",0);
+let skin=load("skin","auramonster.gif");
+
+let bossMode=false;
+let spawnLoop=null;
+
+const keys=["1","2","3","4"];
+const lanes=[20,40,60,80];
+
+let notes=[];
+let running=false;
+
+const music=document.getElementById("music");
+const bossMusic=document.getElementById("bossMusic");
+const hitSound=document.getElementById("hitSound");
+const line=document.getElementById("line");
+
+const lineY=()=>window.innerHeight-260;
+
+// LOJA
+function updateShopUI(){
+document.getElementById("coins").innerText=coins;
+document.getElementById("mult").innerText=multiplier.toFixed(1);
+}
+
+function buyMultiplier(){
+if(coins>=500){
+coins-=500; multiplier+=0.5;
+updateShopUI(); shopFeedback("UP!"); save();
+}else shopFeedback("Sem pontos","red");
+}
+
+function buySpeed(){
+if(coins>=400){
+coins-=400; speed+=0.5;
+updateShopUI(); shopFeedback("Speed!"); save();
+}else shopFeedback("Sem pontos","red");
+}
+
+function buySlowmo(){
+if(coins>=600){
+coins-=600; slowmo++;
+updateShopUI(); shopFeedback("Slow!"); save();
+}else shopFeedback("Sem pontos","red");
+}
+
+function buyAuto(){
+if(coins>=800){
+coins-=800; autocomb++;
+updateShopUI(); shopFeedback("Auto!"); save();
+}else shopFeedback("Sem pontos","red");
+}
+
+function resetStats(){
+multiplier=1; speed=3.5; slowmo=0; autocomb=0; coins=0;
+save(); updateShopUI(); shopFeedback("Resetado");
+}
+
+function shopFeedback(t,c="#ffd700"){
+let f=document.getElementById("feedback");
+f.innerText=t; f.style.color=c;
+setTimeout(()=>f.innerText="",800);
+}
+
+function setSkin(s){
+skin=s; save(); shopFeedback("Skin equipada");
+}
+
+// MENU
+function startGame(){
+document.getElementById("menu").style.display="none";
+document.getElementById("gif").style.display="block";
+line.style.display="block";
+
+running=true;
+score=0; combo=0; misses=0;
+
+document.getElementById("gif").src=skin;
+
+music.currentTime=0;
+music.play();
+
+spawnLoop=setInterval(spawnNote,900);
+requestAnimationFrame(update);
+}
+
+function openShop(){
+document.getElementById("menu").style.display="none";
+document.getElementById("shop").style.display="flex";
+line.style.display="none";
+updateShopUI();
+}
+
+function closeShop(){
+document.getElementById("shop").style.display="none";
+document.getElementById("menu").style.display="flex";
+}
+
+// BOSS
+function startBoss(){
+bossMode=true;
+document.body.classList.add("boss");
+line.classList.add("boss");
+
+music.pause();
+bossMusic.currentTime=0;
+bossMusic.play();
+
+document.getElementById("gif").src="boss.gif";
+
+show("💀 BOSS 💀");
+}
+
+// GAME
+function spawnNote(){
+if(!running) return;
+
+let lane=Math.floor(Math.random()*4);
+let note=document.createElement("div");
+
+note.className="note";
+if(bossMode) note.classList.add("boss");
+
+note.innerText=lane+1;
+note.style.left=lanes[lane]+"%";
+note.style.top="0px";
+
+document.body.appendChild(note);
+notes.push({el:note,lane,y:0,hit:false});
+}
+
+function update(){
+if(!running) return;
+
+notes.forEach(n=>{
+let sp=speed;
+
+if(slowmo>0 && Math.random()<0.1) sp*=0.5;
+if(bossMode) sp*=1.4;
+
+n.y+=sp;
+n.el.style.top=n.y+"px";
+
+if(n.y>lineY()+60&&!n.hit){
+n.hit=true;
+n.el.remove();
+miss();
+}
+});
+
+requestAnimationFrame(update);
+}
+
+// INPUT
+document.addEventListener("keydown",(e)=>{
+let lane=keys.indexOf(e.key);
+if(lane===-1||!running) return;
+
+let best=null,dist=999;
+
+notes.forEach(n=>{
+if(n.lane===lane&&!n.hit){
+let d=Math.abs(n.y-lineY());
+if(d<dist){dist=d;best=n;}
+}
+});
+
+if(best){
+if(dist<40){
+combo++; score+=150*multiplier; coins+=150;
+show("PERFECT");
+}else if(dist<80){
+combo++; score+=80*multiplier; coins+=80;
+show("GOOD");
+}else return miss();
+
+if(combo>=40&&!bossMode){
+startBoss();
+}
+
+hitSound.currentTime=0;
+hitSound.play();
+
+let r=best.el.getBoundingClientRect();
+spawnParticles(r.left+30,r.top+30,bossMode?"red":"#00ffcc");
+
+best.hit=true;
+best.el.remove();
+}else miss();
+
+save();
+updateUI();
+});
+
+// PARTICULAS
+function spawnParticles(x,y,color){
+for(let i=0;i<10;i++){
+let p=document.createElement("div");
+p.style.position="absolute";
+p.style.width="6px";
+p.style.height="6px";
+p.style.background=color;
+p.style.left=x+"px";
+p.style.top=y+"px";
+p.style.borderRadius="50%";
+document.body.appendChild(p);
+
+let vx=(Math.random()-0.5)*6;
+let vy=(Math.random()-0.5)*6;
+let life=30;
+
+function anim(){
+if(life--<=0) return p.remove();
+x+=vx;y+=vy;
+p.style.left=x+"px";
+p.style.top=y+"px";
+p.style.opacity=life/30;
+requestAnimationFrame(anim);
+}
+anim();
+}
+}
+
+function miss(){
+if(autocomb>0 && Math.random()<0.3){
+show("SAVE!");
+return;
+}
+
+combo=0; misses++;
+
+bossMode=false;
+document.body.classList.remove("boss");
+line.classList.remove("boss");
+
+bossMusic.pause();
+music.play();
+
+document.getElementById("gif").src=skin;
+
+show("MISS");
+
+if(misses>=5){
+running=false;
+music.pause();
+bossMusic.pause();
+clearInterval(spawnLoop);
+document.getElementById("gameover").style.display="flex";
+}
+}
+
+function show(t){
+let f=document.getElementById("feedback");
+f.innerText=t;
+f.style.color="#00ffcc";
+setTimeout(()=>f.innerText="",300);
+}
+
+function updateUI(){
+document.getElementById("score").innerText=Math.floor(score);
+document.getElementById("combo").innerText=combo;
+document.getElementById("miss").innerText=misses;
+}
+</script>
+
+</body>
+</html>  position: absolute;
   bottom: 0px;
   left: 50%;
   transform: translateX(-50%);
