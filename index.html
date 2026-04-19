@@ -1,227 +1,322 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Subaru Reflexo Game</title>
+<title>Subaru Rhythm</title>
 
 <style>
 body {
-    margin: 0;
-    font-family: Arial;
-    overflow: hidden;
-    background: #031a0f; /* 🔥 verde bem escuro */
+  margin: 0;
+  overflow: hidden;
+  background: black;
+  font-family: Arial;
+  color: #00ffcc;
 }
 
+/* UI */
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
+}
 
-/* FUNDO */
+/* Linha (AGORA CORRETA) */
+#line {
+  position: absolute;
+  bottom: 260px;
+  width: 100%;
+  height: 4px;
+  background: #00ffcc;
+  box-shadow: 0 0 15px #00ffcc;
+  z-index: 5;
+}
+
+/* Subaru (AJUSTADO) */
+#gif {
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px;
+  border-radius: 15px;
+  box-shadow: 0 0 25px #00ffcc;
+  opacity: 0.85;
+  z-index: 1;
+}
+
+/* Notas */
+.note {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: #00ffcc;
+  border-radius: 10px;
+  text-align: center;
+  line-height: 60px;
+  font-weight: bold;
+  color: black;
+  box-shadow: 0 0 15px #00ffcc;
+  z-index: 10;
+}
+
+/* Feedback */
+#feedback {
+  position: absolute;
+  bottom: 300px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 40px;
+  z-index: 20;
+}
+
+/* Menu */
 #menu {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: url("https://moewalls.com/wp-content/uploads/2022/07/subaru-and-beatrice-smoking-together-rezero-thumb.jpg") no-repeat center;
-    background-size: cover;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  background: black;
+  z-index: 200;
 }
 
-/* BOTÃO PLAY */
-#playBtn {
-    padding: 20px 50px;
-    font-size: 30px;
-    background: #00ff99;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: 0.3s;
+/* Game Over */
+#gameover {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.9);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  z-index: 999;
 }
 
-#playBtn:hover {
-    transform: scale(1.1);
-}
-
-/* JOGO */
-#game {
-    display: none;
-}
-
-/* SCORE */
-#score {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    font-size: 28px;
-    color: rgb(255, 251, 6);
-}
-
-/* LETRA */
-#letter {
-    position: absolute;
-    font-size: 90px;
-    font-weight: bold;
-    color: #00ff99;
-    text-shadow: 0 0 20px #00ff99;
-    z-index: 2;
-}
-
-/* GIF */
-#subaru {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 750px;
-    border-radius: 20px;
-    box-shadow: 0 0 30px rgba(0,255,150,0.5);
-    z-index: 1;
-}
-
-/* GAME OVER */
-#gameOver {
-    display: none;
-    font-size: 70px;
-    color: rgb(149, 0, 194);
-    position: absolute;
-    top: 40%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-/* SHAKE */
-.shake {
-    animation: shake 0.3s;
-}
-
-@keyframes shake {
-    0% { transform: translate(0,0); }
-    25% { transform: translate(10px,-10px); }
-    50% { transform: translate(-10px,10px); }
-    75% { transform: translate(10px,10px); }
-    100% { transform: translate(0,0); }
+button {
+  padding: 10px 30px;
+  font-size: 20px;
+  background: #00ffcc;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
 }
 </style>
-</head>
 
+</head>
 <body>
 
-<!-- MENU -->
 <div id="menu">
-    <h1 style="color:rgb(0, 255, 42); font-size:60px;">Simulador de Aura Monster</h1>
-    <button id="playBtn">PLAY</button>
+  <h1>Subaru Rhythm</h1>
+  <button onclick="startGame()">PLAY</button>
 </div>
 
-<!-- JOGO -->
-<div id="game">
-    <div id="score">Pontos: 0</div>
-    <div id="letter">A</div>
-    <img id="subaru" src="auragif.gif">
-    <div id="gameOver">💀 GAME OVER 💀</div>
+<div id="gameover">
+  <h1>💀 GAME OVER 💀</h1>
+  <button onclick="location.reload()">RESTART</button>
 </div>
 
-<!-- SONS -->
+<div id="ui">
+  Pontos: <span id="score">0</span><br>
+  Combo: <span id="combo">0</span><br>
+  Erros: <span id="miss">0</span>/5
+</div>
+
+<div id="feedback"></div>
+<div id="line"></div>
+
+<img id="gif" src="auramonster.gif">
+
+<!-- 🎵 MUSICA -->
+<audio id="music" src="auramusic.mp3"></audio>
 <audio id="hitSound" src="clickaura.mp3"></audio>
-<audio id="failSound" src="erroaura.mp3"></audio>
-<audio id="bgMusic" src="auramusic.mp3" loop></audio>
-
 <script>
-const letters = ["1","2","3","4"];
-
-let currentLetter = "";
 let score = 0;
-let speed = 2000; // 🔥 começa mais tranquilo
-let timeout;
+let combo = 0;
+let misses = 0;
 
-const menu = document.getElementById("menu");
-const game = document.getElementById("game");
-const playBtn = document.getElementById("playBtn");
+const keys = ["1","2","3","4"];
+const lanes = [20, 40, 60, 80];
 
-const letterDiv = document.getElementById("letter");
-const scoreDiv = document.getElementById("score");
-const gameOverText = document.getElementById("gameOver");
+let notes = [];
+let running = false;
 
+const music = document.getElementById("music");
 const hitSound = document.getElementById("hitSound");
-const failSound = document.getElementById("failSound");
-const bgMusic = document.getElementById("bgMusic");
+/* LINHA ALINHADA */
+const lineY = () => window.innerHeight - 260;
 
-/* START GAME */
-playBtn.onclick = () => {
-    menu.style.display = "none";
-    game.style.display = "block";
+function startGame() {
+  document.getElementById("menu").style.display = "none";
+  running = true;
 
-    bgMusic.play().catch(()=>{});
+  music.currentTime = 0;
+  music.play(); // 🎵 começa música
 
-    spawnLetter();
-};
-
-function spawnLetter() {
-    clearTimeout(timeout);
-
-    currentLetter = letters[Math.floor(Math.random() * letters.length)];
-    letterDiv.textContent = currentLetter;
-
-    const x = Math.random() * (window.innerWidth - 100);
-    const y = Math.random() * (window.innerHeight - 300);
-
-    letterDiv.style.left = x + "px";
-    letterDiv.style.top = y + "px";
-
-    timeout = setTimeout(() => {
-        gameOver();
-    }, speed);
+  setInterval(spawnNote, 900);
+  requestAnimationFrame(update);
 }
 
-function gameOver() {
-    failSound.play();
-    document.body.classList.add("shake");
+function spawnNote() {
+  if (!running) return;
 
-    bgMusic.pause();
-    bgMusic.currentTime = 0;
+  let lane = Math.floor(Math.random() * 4);
 
-    gameOverText.style.display = "block";
+  let note = document.createElement("div");
+  note.className = "note";
+  note.innerText = lane + 1;
 
-    setTimeout(resetGame, 2000);
+  note.style.left = lanes[lane] + "%";
+  note.style.top = "0px";
+
+  document.body.appendChild(note);
+
+  notes.push({
+    el: note,
+    lane: lane,
+    y: 0,
+    hit: false
+  });
 }
 
-function resetGame() {
-    score = 0;
-    speed = 2000; // 🔥 reset mais justo
+function update() {
+  if (!running) return;
 
-    scoreDiv.textContent = "Pontos: 0";
-    gameOverText.style.display = "none";
+  notes.forEach(n => {
+    n.y += 3.5;
+    n.el.style.top = n.y + "px";
 
-    bgMusic.play().catch(()=>{});
+    if (n.y > lineY() + 60 && !n.hit) {
+      n.hit = true;
+      n.el.remove();
+      miss();
+    }
+  });
 
-    spawnLetter();
+  requestAnimationFrame(update);
 }
 
 document.addEventListener("keydown", (e) => {
-    if (!currentLetter) return;
+  let lane = keys.indexOf(e.key.toLowerCase());
+  if (lane === -1 || !running) return;
 
-    // 🔥 ignora teclas inválidas
-    if (!letters.includes(e.key)) return;
+  let best = null;
+  let bestDist = 999;
 
-    if (e.key === currentLetter) {
-        clearTimeout(timeout);
-
-        score++;
-        scoreDiv.textContent = "Pontos: " + score;
-
-        hitSound.currentTime = 0;
-        hitSound.play();
-
-        // 🔥 agora sobe a dificuldade de 15 em 15
-        if (score % 15 === 0) {
-            speed = Math.max(800, speed - 150);
-        }
-
-        // 🔥 pequeno delay (fica mais justo)
-        setTimeout(spawnLetter, 150);
-
-    } else {
-        gameOver();
+  notes.forEach(n => {
+    if (n.lane === lane && !n.hit) {
+      let dist = Math.abs(n.y - lineY());
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = n;
+      }
     }
+  });
+if (best) {
+
+  if (bestDist < 40) {
+    combo++;
+    score += 150;
+    show("PERFECT");
+
+  } else if (bestDist < 80) {
+    combo++;
+    score += 80;
+    show("GOOD");
+
+  } else {
+    miss();
+    return;
+  }
+
+  // 🔊 SOM
+  hitSound.currentTime = 0;
+  hitSound.play();
+
+  // ✨ PARTÍCULAS
+  let rect = best.el.getBoundingClientRect();
+  spawnParticles(rect.left + 30, rect.top + 30);
+
+  best.hit = true;
+  best.el.remove();
+
+} else {
+  miss();
+}
+
+  updateUI();
 });
+
+function miss() {
+  combo = 0;
+  misses++;
+  show("MISS");
+
+  if (misses >= 5) {
+    running = false;
+    music.pause(); // para música
+    document.getElementById("gameover").style.display = "flex";
+  }
+}
+
+function show(txt) {
+  const f = document.getElementById("feedback");
+  f.innerText = txt;
+  setTimeout(() => f.innerText = "", 300);
+}
+
+function updateUI() {
+  document.getElementById("score").innerText = score;
+  document.getElementById("combo").innerText = combo;
+  document.getElementById("miss").innerText = misses;
+}
+function spawnParticles(x, y) {
+  for (let i = 0; i < 10; i++) {
+    let p = document.createElement("div");
+
+    p.style.position = "absolute";
+    p.style.width = "6px";
+    p.style.height = "6px";
+    p.style.background = "#00ffcc";
+    p.style.left = x + "px";
+    p.style.top = y + "px";
+    p.style.borderRadius = "50%";
+    p.style.pointerEvents = "none";
+    p.style.zIndex = 50;
+
+    document.body.appendChild(p);
+
+    let angle = Math.random() * 2 * Math.PI;
+    let speed = Math.random() * 4 + 2;
+
+    let vx = Math.cos(angle) * speed;
+    let vy = Math.sin(angle) * speed;
+
+    let life = 30;
+
+    function animate() {
+      if (life-- <= 0) {
+        p.remove();
+        return;
+      }
+
+      x += vx;
+      y += vy;
+
+      p.style.left = x + "px";
+      p.style.top = y + "px";
+      p.style.opacity = life / 30;
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  }
+}
 </script>
+
 </body>
 </html>
