@@ -13,18 +13,31 @@ body {
   color:#00ffcc;
 }
 
-/* GAME */
-#game { width:100%; height:100%; }
+/* fundo fix */
+body.stage1, body.stage2, body.stage3 {
+  background-color:black !important;
+}
+body.stage1 { background: radial-gradient(circle,#1a0033,black); }
+body.stage2 { background: radial-gradient(circle,#2a0050,black); }
+body.stage3 { background: radial-gradient(circle,#3a0070,black); }
 
-/* BOSS */
-body.boss {
-  box-shadow: inset 0 0 150px red;
+/* boss */
+body.boss { box-shadow: inset 0 0 150px red; }
+
+/* barra vida */
+#bossHP {
+  position:absolute;
+  top:0; left:0;
+  height:8px;
+  width:100%;
+  background:red;
+  display:none;
 }
 
 /* UI */
 #ui { position:absolute; top:10px; left:10px; z-index:100; }
 
-/* LINHA */
+/* linha */
 #line {
   position:absolute;
   bottom:260px;
@@ -38,7 +51,7 @@ body.boss {
   box-shadow:0 0 20px red;
 }
 
-/* SUBARU */
+/* subaru */
 #gif {
   position:absolute;
   bottom:0;
@@ -46,15 +59,12 @@ body.boss {
   transform:translateX(-50%);
   width:400px;
   display:none;
-  z-index:1;
   border-radius:15px;
   box-shadow:0 0 25px #00ffcc;
 }
-body.boss #gif {
-  box-shadow:0 0 30px red;
-}
+body.boss #gif { box-shadow:0 0 30px red; }
 
-/* NOTAS */
+/* notas */
 .note {
   position:absolute;
   width:60px;
@@ -67,12 +77,10 @@ body.boss #gif {
   color:black;
   box-shadow:0 0 15px #00ffcc;
 }
-.note.boss {
-  background:red;
-  box-shadow:0 0 20px red;
-}
+.note.boss { background:red; box-shadow:0 0 20px red; }
+.note.fake { background:purple !important; }
 
-/* FEEDBACK */
+/* feedback */
 #feedback {
   position:absolute;
   bottom:300px;
@@ -82,8 +90,8 @@ body.boss #gif {
   z-index:999;
 }
 
-/* MENUS */
-#menu, #shop {
+/* menus */
+#menu,#shop {
   position:absolute;
   width:100%;
   height:100%;
@@ -95,7 +103,6 @@ body.boss #gif {
 }
 #shop { display:none; }
 
-/* GAMEOVER */
 #gameover {
   position:absolute;
   width:100%;
@@ -107,7 +114,6 @@ body.boss #gif {
   flex-direction:column;
 }
 
-/* BOTÕES */
 button {
   padding:10px 30px;
   font-size:20px;
@@ -121,6 +127,8 @@ button {
 </head>
 
 <body>
+
+<div id="bossHP"></div>
 
 <div id="game">
 
@@ -165,6 +173,8 @@ button {
 
 <audio id="music" src="auramusic.mp3"></audio>
 <audio id="bossMusic" src="boss.mp3"></audio>
+<audio id="bossMusic2" src="boss2.mp3"></audio>
+<audio id="bossMusic3" src="boss3.mp3"></audio>
 <audio id="hitSound" src="clickaura.mp3"></audio>
 
 </div>
@@ -191,6 +201,11 @@ let autocomb=load("autocomb",0);
 let skin=load("skin","auramonster.gif");
 
 let bossMode=false;
+let bossStage=0;
+let bossHP=100;
+
+const bossBar=document.getElementById("bossHP");
+
 let spawnLoop=null;
 
 const keys=["1","2","3","4"];
@@ -201,59 +216,12 @@ let running=false;
 
 const music=document.getElementById("music");
 const bossMusic=document.getElementById("bossMusic");
+const bossMusic2=document.getElementById("bossMusic2");
+const bossMusic3=document.getElementById("bossMusic3");
 const hitSound=document.getElementById("hitSound");
 const line=document.getElementById("line");
 
 const lineY=()=>window.innerHeight-260;
-
-// LOJA
-function updateShopUI(){
-document.getElementById("coins").innerText=coins;
-document.getElementById("mult").innerText=multiplier.toFixed(1);
-}
-
-function buyMultiplier(){
-if(coins>=500){
-coins-=500; multiplier+=0.5;
-updateShopUI(); shopFeedback("UP!"); save();
-}else shopFeedback("Sem pontos","red");
-}
-
-function buySpeed(){
-if(coins>=400){
-coins-=400; speed+=0.5;
-updateShopUI(); shopFeedback("Speed!"); save();
-}else shopFeedback("Sem pontos","red");
-}
-
-function buySlowmo(){
-if(coins>=600){
-coins-=600; slowmo++;
-updateShopUI(); shopFeedback("Slow!"); save();
-}else shopFeedback("Sem pontos","red");
-}
-
-function buyAuto(){
-if(coins>=800){
-coins-=800; autocomb++;
-updateShopUI(); shopFeedback("Auto!"); save();
-}else shopFeedback("Sem pontos","red");
-}
-
-function resetStats(){
-multiplier=1; speed=3.5; slowmo=0; autocomb=0; coins=0;
-save(); updateShopUI(); shopFeedback("Resetado");
-}
-
-function shopFeedback(t,c="#ffd700"){
-let f=document.getElementById("feedback");
-f.innerText=t; f.style.color=c;
-setTimeout(()=>f.innerText="",800);
-}
-
-function setSkin(s){
-skin=s; save(); shopFeedback("Skin equipada");
-}
 
 // MENU
 function startGame(){
@@ -263,6 +231,9 @@ line.style.display="block";
 
 running=true;
 score=0; combo=0; misses=0;
+bossMode=false;
+bossStage=0;
+bossBar.style.display="none";
 
 document.getElementById("gif").src=skin;
 
@@ -285,19 +256,48 @@ document.getElementById("shop").style.display="none";
 document.getElementById("menu").style.display="flex";
 }
 
+function updateShopUI(){
+document.getElementById("coins").innerText=coins;
+document.getElementById("mult").innerText=multiplier.toFixed(1);
+}
+
+function buyMultiplier(){if(coins>=500){coins-=500; multiplier+=0.5;updateShopUI(); save();}}
+function buySpeed(){if(coins>=400){coins-=400; speed+=0.5;updateShopUI(); save();}}
+function buySlowmo(){if(coins>=600){coins-=600; slowmo++;updateShopUI(); save();}}
+function buyAuto(){if(coins>=800){coins-=800; autocomb++;updateShopUI(); save();}}
+function resetStats(){multiplier=1; speed=3.5; slowmo=0; autocomb=0; coins=0;save(); updateShopUI();}
+
+function setSkin(s){
+  skin = s;
+  save();
+
+  let gif = document.getElementById("gif");
+  gif.src = skin;
+}
 // BOSS
-function startBoss(){
+function startBoss(stage=1){
 bossMode=true;
+bossStage=stage;
+bossHP=100;
+
+bossBar.style.display="block";
+
 document.body.classList.add("boss");
 line.classList.add("boss");
 
+document.body.classList.remove("stage1","stage2","stage3");
+if(stage===1) document.body.classList.add("stage1");
+if(stage===2) document.body.classList.add("stage2");
+if(stage===3) document.body.classList.add("stage3");
+
 music.pause();
-bossMusic.currentTime=0;
-bossMusic.play();
+bossMusic.pause();
+bossMusic2.pause();
+bossMusic3.pause();
 
-document.getElementById("gif").src="boss.gif";
-
-show("💀 BOSS 💀");
+if(stage===1){bossMusic.play();document.getElementById("gif").src="boss.gif";}
+if(stage===2){bossMusic2.play();document.getElementById("gif").src="boss2.gif";}
+if(stage===3){bossMusic3.play();document.getElementById("gif").src="boss3.gif";}
 }
 
 // GAME
@@ -315,7 +315,15 @@ note.style.left=lanes[lane]+"%";
 note.style.top="0px";
 
 document.body.appendChild(note);
-notes.push({el:note,lane,y:0,hit:false});
+
+let data={el:note,lane,y:0,hit:false,fake:false};
+
+if(bossMode && Math.random()<0.25){
+data.fake=true;
+note.classList.add("fake");
+}
+
+notes.push(data);
 }
 
 function update(){
@@ -325,7 +333,9 @@ notes.forEach(n=>{
 let sp=speed;
 
 if(slowmo>0 && Math.random()<0.1) sp*=0.5;
-if(bossMode) sp*=1.4;
+if(bossStage===1) sp*=1.4;
+if(bossStage===2) sp*=1.7;
+if(bossStage===3) sp*=2.2;
 
 n.y+=sp;
 n.el.style.top=n.y+"px";
@@ -333,7 +343,7 @@ n.el.style.top=n.y+"px";
 if(n.y>lineY()+60&&!n.hit){
 n.hit=true;
 n.el.remove();
-miss();
+if(!n.fake){ miss(); }
 }
 });
 
@@ -348,23 +358,32 @@ if(lane===-1||!running) return;
 let best=null,dist=999;
 
 notes.forEach(n=>{
-if(n.lane===lane&&!n.hit){
+if(n.lane===lane&&!n.hit&&!n.fake){
 let d=Math.abs(n.y-lineY());
 if(d<dist){dist=d;best=n;}
 }
 });
 
 if(best){
-if(dist<40){
-combo++; score+=150*multiplier; coins+=150;
-show("PERFECT");
-}else if(dist<80){
-combo++; score+=80*multiplier; coins+=80;
-show("GOOD");
-}else return miss();
+if(dist<40){combo++; score+=150*multiplier; coins+=150;show("PERFECT");}
+else if(dist<80){combo++; score+=80*multiplier; coins+=80;show("GOOD");}
+else return miss();
 
-if(combo>=40&&!bossMode){
-startBoss();
+if(combo>=40 && bossStage<1) startBoss(1);
+if(combo>=60 && bossStage<2) startBoss(2);
+if(combo>=80 && bossStage<3) startBoss(3);
+
+if(bossMode){
+bossHP--;
+bossBar.style.width=bossHP+"%";
+
+if(bossHP<=0){
+bossMode=false;
+bossStage=0;
+bossBar.style.display="none";
+document.body.classList.remove("boss","stage1","stage2","stage3");
+music.play();
+}
 }
 
 hitSound.currentTime=0;
@@ -381,7 +400,7 @@ save();
 updateUI();
 });
 
-// PARTICULAS
+// PARTICULAS ORIGINAL
 function spawnParticles(x,y,color){
 for(let i=0;i<10;i++){
 let p=document.createElement("div");
@@ -410,6 +429,7 @@ anim();
 }
 }
 
+// MISS
 function miss(){
 if(autocomb>0 && Math.random()<0.3){
 show("SAVE!");
@@ -419,10 +439,15 @@ return;
 combo=0; misses++;
 
 bossMode=false;
-document.body.classList.remove("boss");
+bossStage=0;
+bossBar.style.display="none";
+
+document.body.classList.remove("boss","stage1","stage2","stage3");
 line.classList.remove("boss");
 
 bossMusic.pause();
+bossMusic2.pause();
+bossMusic3.pause();
 music.play();
 
 document.getElementById("gif").src=skin;
@@ -432,7 +457,6 @@ show("MISS");
 if(misses>=5){
 running=false;
 music.pause();
-bossMusic.pause();
 clearInterval(spawnLoop);
 document.getElementById("gameover").style.display="flex";
 }
@@ -441,7 +465,6 @@ document.getElementById("gameover").style.display="flex";
 function show(t){
 let f=document.getElementById("feedback");
 f.innerText=t;
-f.style.color="#00ffcc";
 setTimeout(()=>f.innerText="",300);
 }
 
